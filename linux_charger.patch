@@ -1,0 +1,402 @@
+diff -r 4fe893a5ee63 drivers/mxc/pmic/core/pmic_core_spi.c
+--- a/drivers/mxc/pmic/core/pmic_core_spi.c	Thu Aug 09 16:00:33 2012 +0300
++++ b/drivers/mxc/pmic/core/pmic_core_spi.c	Fri Sep 21 16:28:41 2012 +0300
+@@ -42,7 +42,7 @@
+ #include <asm/uaccess.h>
+ 
+ #include <linux/mfd/mc13892/core.h>
+-#include <linux/mfd/mc34708/core.h>
++//#include <linux/mfd/mc34708/core.h>
+ 
+ #include "pmic.h"
+ 
+@@ -100,7 +100,7 @@
+ 
+ struct pmic_internal pmic_internal[] = {
+ 	[PMIC_ID_MC13892] = _PMIC_INTERNAL_INITIALIZER(mc13892),
+-	[PMIC_ID_MC34708] = _PMIC_INTERNAL_INITIALIZER(mc34708),
++//	[PMIC_ID_MC34708] = _PMIC_INTERNAL_INITIALIZER(mc34708),
+ };
+ 
+ /*
+@@ -329,9 +329,11 @@
+ static const struct spi_device_id pmic_device_id[] = {
+ 	{
+ 		.name = "mc13892",
+-	}, {
+-		.name = "mc34708",
+-	}, {
++	}, 
++//	{
++//		.name = "mc34708",
++//	}, 
++	{
+ 		/* sentinel */
+ 	}
+ };
+diff -r 4fe893a5ee63 drivers/mxc/pmic/mc13892/pmic_battery.c
+--- a/drivers/mxc/pmic/mc13892/pmic_battery.c	Thu Aug 09 16:00:33 2012 +0300
++++ b/drivers/mxc/pmic/mc13892/pmic_battery.c	Fri Sep 21 16:28:41 2012 +0300
+@@ -19,7 +19,7 @@
+ /*
+  * Includes
+  */
+-//#define DEBUG 
++#define DEBUG 
+ #include <linux/workqueue.h>
+ #include <linux/platform_device.h>
+ #include <linux/power_supply.h>
+@@ -45,7 +45,7 @@
+ int bind_flag = 0;
+ EXPORT_SYMBOL(bind_flag);
+ int  usb_adapter_state(void);
+-//#define EP_TEST
++#define EP_TEST
+ #ifdef EP_TEST
+ 	#define TEST(x, args...) 	printk(x, ##args)
+ #else
+@@ -977,8 +977,7 @@
+ 		di->full_counter = 0;
+ 	}
+ 
+-	//dev_dbg(di->bat.dev, "bat status: %d\n",
+-	//	di->battery_status);
++	dev_dbg(di->bat.dev, "bat status: %d\n", di->battery_status);
+ 
+ 	if (old_battery_status != POWER_SUPPLY_STATUS_UNKNOWN &&
+ 		di->battery_status != old_battery_status)
+@@ -992,7 +991,7 @@
+ 						     monitor_work.work);
+ 	const int interval = HZ * 2;
+ 
+-	//dev_dbg(di->dev, "%s\n", __func__);
++	dev_dbg(di->dev, "%s\n", __func__);
+ 
+ 	mc13892_battery_update_status(di);
+ 	queue_delayed_work(di->monitor_wqueue, &di->monitor_work, interval);
+@@ -1057,6 +1056,9 @@
+ 				       union power_supply_propval *val)
+ {
+ 	struct mc13892_dev_info *di = to_mc13892_dev_info(psy);
++	
++	printk("%s() Enter\n", __func__);
++
+ 	switch (psp) {
+ 	case POWER_SUPPLY_PROP_STATUS:
+ 		if (di->battery_status == POWER_SUPPLY_STATUS_UNKNOWN) {
+@@ -1215,12 +1217,14 @@
+ 
+ 	platform_set_drvdata(pdev, di);
+ 	
+-	/*pmic_read_reg(REG_INT_SENSE0, &value, BITFMASK(BIT_CHG_DETS));
+-  charger = BITFEXT(value, BIT_CHG_DETS);
+-	if(charger && !(charger_detect())){
+-	  hw_set_ac(1);}
++	/*
++	pmic_read_reg(REG_INT_SENSE0, &value, BITFMASK(BIT_CHG_DETS));
++	charger = BITFEXT(value, BIT_CHG_DETS);
++	if(charger && !(charger_detect()))
++		hw_set_ac(1);
+ 	else
+-	  hw_set_ac(0);*/
++		hw_set_ac(0);
++	*/
+ 	  
+ 	usb_adapter_det = bsp_charger_detect();
+ 	if(2 == usb_adapter_det || 3 == usb_adapter_det)
+@@ -1332,30 +1336,29 @@
+ 	kfree(di);
+ success:
+ 	dev_dbg(di->dev, "%s battery probed!\n", __func__);
+-  return retval;
++	return retval;
+ }
+ 
+-
+ int get_bat_charge_status(void)
+ {
+ 	if(ep7_charge_info.battery_level_curr_status>=BAT_STATUS_NUM)
+ 		printk(KERN_INFO "sorry for battery status out of limited level\n");
+ 	
+ 	return ep7_charge_info.battery_level_curr_status;
+-
+ }
+ EXPORT_SYMBOL(get_bat_charge_status);
+ 
+ static int pmic_battery_suspend(struct platform_device *pdev,
+                                 pm_message_t state)
+ {
+-  unsigned int value,charger;
++	unsigned int value,charger;
++
+ 	pmic_read_reg(REG_INT_SENSE0, &value, BITFMASK(BIT_CHG_DETS));
+-  charger = BITFEXT(value, BIT_CHG_DETS);
++	charger = BITFEXT(value, BIT_CHG_DETS);
+ 	if(charger)
+-	return -1;	
++		return -1;	
+ 	
+-  suspend_flag = 1;
++	suspend_flag = 1;
+ 	return 0;
+ };
+ 
+@@ -1367,10 +1370,11 @@
+ 
+ static struct platform_driver pmic_battery_driver_ldm = {
+ 	.driver = {
+-		   .name = "mc13892_battery",
+-		   .bus = &platform_bus_type,},
++		.name = "mc13892_battery",
++		.bus = &platform_bus_type,
++	},
+ 	.suspend = pmic_battery_suspend,
+-  .resume = pmic_battery_resume,
++	.resume = pmic_battery_resume,
+ 	.probe = pmic_battery_probe,
+ 	.remove = pmic_battery_remove,
+ };
+diff -r 4fe893a5ee63 drivers/power/max17043_battery.c
+--- a/drivers/power/max17043_battery.c	Thu Aug 09 16:00:33 2012 +0300
++++ b/drivers/power/max17043_battery.c	Fri Sep 21 16:28:41 2012 +0300
+@@ -94,6 +94,8 @@
+ 	struct max17040_chip *chip = container_of(psy,
+ 				struct max17040_chip, battery);
+ 
++	printk("%s: Enter\n", __func__);
++
+ 	switch (psp) {
+ 	case POWER_SUPPLY_PROP_STATUS:
+ 		val->intval = chip->status;
+@@ -164,13 +166,15 @@
+ 	
+ 	chip->vcell = ((msb << 4) + (lsb >> 4))*125;
+ 	*/
++
+ 	int volt = 0;
+ 	max17044_read(MAX17040_VCELL_MSB,&volt,client);
+ 	
+ 	volt = ((volt >> 4) & 0xFFF)*1250;
+ 	chip->vcell=volt;
+-	//printk("MAX17043 detect:voltage_now:%duV\n", volt);
++	printk("MAX17043 detect:voltage_now:%duV\n", volt);
+ }
++
+ //base on customer BSP spec
+ //0---2%-15%
+ //1---16%-29%
+@@ -191,14 +195,15 @@
+ 
+ 	chip->soc = msb/2;
+ 	*/
++
+ 	int value;
+ 	int rsoc=0;
+ 	int step=0;
+ 	max17044_read(MAX17040_SOC_MSB,&rsoc,client);
+ 	rsoc = ((rsoc>>8) & 0xff)/2;
++
+ #if 1
+-	if(rsoc>10)
+-	{
++	if (rsoc > 10) {
+ 		max17044_read(0x0C,&value,client);
+ 		value &= 0xffe0;
+ 		value |= 0x000c;
+@@ -206,8 +211,7 @@
+ 		max17044_read(0x0C,&value,chip->client);
+ 	}
+ 
+-	if(rsoc<10 && rsoc>5)
+-	{
++	if (rsoc < 10 && rsoc > 5) {
+ 		max17044_read(0x0C,&value,client);
+ 		value &= 0xffe0;
+ 		value |= 0x0016;
+@@ -215,8 +219,7 @@
+ 		max17044_read(0x0C,&value,chip->client);
+ 	}
+ 	
+-	if(rsoc<5)
+-	{
++	if (rsoc < 5) {
+ 		max17044_read(0x0C,&value,client);
+ 		value &= 0xffe0;
+ 		value |= 0x001a;
+@@ -224,35 +227,36 @@
+ 		max17044_read(0x0C,&value,chip->client);
+ 	}	
+ #endif	
+-	if(rsoc >= 100)
++	if (rsoc >= 100)
+ 		rsoc = 100;
+ 	
+-	if(get_bat_charge_status() == BAT_CHARGEFULL)
++	if (get_bat_charge_status() == BAT_CHARGEFULL)
+ 		rsoc = 100;
+ 	
+-	if(get_bat_charge_status() == BAT_CRITICALLOW)
++	if (get_bat_charge_status() == BAT_CRITICALLOW)
+ 		rsoc = 0;
+ 
+ 	chip->soc = rsoc;
+ 	
+ 	if(rsoc>=16)
+-	step=1;
++		step=1;
+ 	
+ 	if(rsoc>=30)
+-	step=2;
++		step=2;
+ 		
+ 	if(rsoc>=44)
+-	step=3;
++		step=3;
+ 	
+ 	if(rsoc>=58)
+-	step=4;
++		step=4;
+ 	
+ 	if(rsoc>=72)
+-	step=5;
++		step=5;
+ 
+ 	if(rsoc>=86)
+-	step=6;
+-	//printk("MAX17043 detect:capacity_now:%d%%\n", rsoc);
++		step=6;
++
++	printk("MAX17043 detect:capacity_now:%d%%\n", rsoc);
+ 
+ 	hw_set_batt(step);	
+ 
+@@ -316,8 +320,10 @@
+ 
+ static void max17040_get_capacity_level(struct i2c_client *client)
+ { 
+-  struct max17040_chip *chip = i2c_get_clientdata(client);
++	struct max17040_chip *chip = i2c_get_clientdata(client);
+   
++	printk("%s: Enter\n", __func__);
++
+ 	if((chip->soc < 0) || (chip->soc > 100))
+ 		chip->cap_level = POWER_SUPPLY_CAPACITY_LEVEL_UNKNOWN;
+ 	else if((chip->soc <= 100) && (chip->soc > 10)){
+@@ -325,7 +331,8 @@
+ 		if(chip->soc == 100)	
+ 			chip->cap_level = POWER_SUPPLY_CAPACITY_LEVEL_FULL;
+ 		else
+-			chip->cap_level = POWER_SUPPLY_CAPACITY_LEVEL_NORMAL;}
++			chip->cap_level = POWER_SUPPLY_CAPACITY_LEVEL_NORMAL;
++	}
+ //	else if((chip->soc <= 10) && (chip->soc > 5) && (chip->status == POWER_SUPPLY_STATUS_DISCHARGING))
+ 	else if((chip->soc <= 10) && (chip->soc > 5))
+ 			chip->cap_level = POWER_SUPPLY_CAPACITY_LEVEL_LOW;
+@@ -355,27 +362,32 @@
+ 	int old_status;
+ 	int old_cap_level;
+ 	int old_health;
+-	
++
+ 	struct max17040_chip *chip;
+ 	chip = container_of(work, struct max17040_chip, work.work);
+-	
++
++	printk("%s: Working ...\n", __func__);
++
+ 	old_status = chip->status;
+ 	old_cap_level = chip->cap_level;
+ 	old_health = chip->health;
+-  
++
+ 	max17040_get_vcell(chip->client);
+ 	max17040_get_soc(chip->client);
+ 	max17040_get_online(chip->client);
+ 	max17040_get_status(chip->client);
+ 	max17040_get_capacity_level(chip->client);
+ 	max17040_get_health(chip->client);
+-	
+-	if ((old_status != POWER_SUPPLY_STATUS_UNKNOWN && chip->status != old_status) \
+-		  || (old_cap_level != POWER_SUPPLY_CAPACITY_LEVEL_UNKNOWN && chip->cap_level != old_cap_level) \
+-		  || (old_health != POWER_SUPPLY_HEALTH_UNKNOWN && chip->health != old_health))
+-	power_supply_changed(&chip->battery);
+-	
+-	schedule_delayed_work(&chip->work, msecs_to_jiffies(MAX17040_DELAY));
++
++	if ((old_status != POWER_SUPPLY_STATUS_UNKNOWN && chip->status != old_status) || \
++	    (old_cap_level != POWER_SUPPLY_CAPACITY_LEVEL_UNKNOWN && chip->cap_level != old_cap_level) || \
++	    (old_health != POWER_SUPPLY_HEALTH_UNKNOWN && chip->health != old_health))
++		power_supply_changed(&chip->battery);
++
++	{
++		printk("%s() Scheduling work\n", __func__);
++		schedule_delayed_work(&chip->work, msecs_to_jiffies(MAX17040_DELAY));
++	}
+ }
+ 
+ static enum power_supply_property max17040_battery_props[] = {
+@@ -402,6 +414,7 @@
+         ret = max17044_read_code(reg,rt_value,client);
+         return ret;
+ }
++
+ /*For normal data writing*/
+ static int max17044_write_code(u8 reg,int wt_value,
+                          struct i2c_client *client)
+@@ -424,6 +437,7 @@
+         err = i2c_transfer(client->adapter, msg, 1);
+         return err;
+ }
++
+ /*For normal data reading*/
+ static int max17044_read_code(u8 reg, int *rt_value,
+ 			struct i2c_client *client)
+@@ -448,16 +462,15 @@
+ 		msg->flags = I2C_M_RD;
+ 		err = i2c_transfer(client->adapter, msg, 1);
+ 		pr_max_info("data[0] is %x and data[1] is %x \n",data[0],data[1]);
+-		if (err >= 0) {		
++		if (err >= 0) {
+ 			*rt_value = get_unaligned_be16(data);
+-		pr_max_info(" get_unaligned_be16(data) is %x \n",*rt_value);
++			pr_max_info(" get_unaligned_be16(data) is %x \n",*rt_value);
+ 			return 0;
+ 		}
+ 	}
+ 	return err;
+ }
+ 
+-
+ /*
+  ************************ Max17044 Loading a Custom Model********************************
+  */
+@@ -515,6 +528,7 @@
+ 	}
+ 	return err;
+ }
++
+ /*2.Read Original RCOMP and OCV Register*/
+ static int max17044_read_rccmp_ocv(struct i2c_client *client,char *rt_value)
+ {
+@@ -806,9 +820,10 @@
+ 
+ 	//cancel_delayed_work(&chip->work);
+ }
++
+ static irqreturn_t max17043_lowbatt_callback(int irq, void *dev_id)
+ {
+-	printk("%s\n", __func__);	
++	printk("%s\n", __func__);
+ //	struct i2c_client *client = (struct i2c_client *)dev_id;
+ 	disable_irq_nosync(irq);
+ 	schedule_delayed_work(&chip->lwork, 0);	
+@@ -904,7 +919,8 @@
+ {
+ 	struct max17040_chip *chip = i2c_get_clientdata(client);
+ 	disable_irq_wake(gpio_to_irq(103));
+-	schedule_delayed_work(&chip->work, msecs_to_jiffies(MAX17040_DELAY));
++//	schedule_delayed_work(&chip->work, msecs_to_jiffies(MAX17040_DELAY));
++	schedule_delayed_work(&chip->work, msecs_to_jiffies(1));
+ 	return 0;
+ }
+ 
